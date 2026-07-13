@@ -1,8 +1,38 @@
 # Supabase migrations
 
-Run these SQL files **in order** against your Supabase project.
+## Option A — Cursor / CLI (recommended)
 
-## Option A — Supabase SQL Editor (recommended for this project)
+If your **Cursor Cloud Environment** has the migration secrets set, an agent can run:
+
+```bash
+npm run db:push
+```
+
+### Secrets to add in Cursor
+
+In **Cursor → Cloud → Environments** (for this repo), add:
+
+| Secret | Where to find it |
+|--------|------------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same |
+| `SUPABASE_SERVICE_ROLE_KEY` | Same |
+| `SUPABASE_ACCESS_TOKEN` | [Supabase Account → Access Tokens](https://supabase.com/dashboard/account/tokens) |
+| `SUPABASE_DB_PASSWORD` | Supabase → Project Settings → Database |
+
+`SUPABASE_PROJECT_REF` is optional — it is parsed from `NEXT_PUBLIC_SUPABASE_URL` automatically.
+
+Vercel env vars are **not** visible to Cursor agents. Add the same values to your Cursor Cloud Environment if you want agents to run migrations or test against your database.
+
+### Local
+
+```bash
+cp .env.local.example .env.local
+# fill in values, then:
+npm run db:push
+```
+
+## Option B — Supabase SQL Editor (manual)
 
 1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**
 2. Run each file in `supabase/migrations/` in numeric order:
@@ -12,16 +42,6 @@ Run these SQL files **in order** against your Supabase project.
    - `0004_daily_steps.sql`
    - `0005_daily_summary.sql`
    - `0006_rls_policies.sql`
-3. Confirm success after each file (or run all in one batch if you prefer)
-
-## Option B — Supabase CLI
-
-If you use the [Supabase CLI](https://supabase.com/docs/guides/cli) locally:
-
-```bash
-supabase link --project-ref YOUR_PROJECT_REF
-supabase db push
-```
 
 ## After migrations
 

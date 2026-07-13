@@ -22,7 +22,9 @@ For local development, copy [`.env.local.example`](./.env.local.example) to `.en
 
 ### 2. Database migrations
 
-Run the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) against your Supabase project. See [`supabase/README.md`](./supabase/README.md) for step-by-step instructions.
+**Cursor agents** can run `npm run db:push` if you add the Supabase secrets to your **Cursor Cloud Environment** (see [`supabase/README.md`](./supabase/README.md)). Vercel env vars alone are not enough for agents.
+
+Alternatively, run the SQL files manually in the Supabase SQL Editor — same instructions in [`supabase/README.md`](./supabase/README.md).
 
 ### 3. Create users
 

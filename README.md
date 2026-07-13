@@ -33,7 +33,29 @@ Alternatively, run the SQL files manually in the Supabase SQL Editor — same in
 
 ### 4. Deploy
 
-Push to GitHub; Vercel deploys automatically. Visit your Vercel URL and sign in.
+Push to GitHub; Vercel deploys automatically.
+
+**Use the URL from Vercel → Deployments → latest Production → Visit.** Do not use stale `*.vercel.app` links (including the GitHub repo homepage) if they return 404.
+
+## Vercel troubleshooting
+
+### `404: NOT_FOUND` (plain Vercel error page)
+
+The build likely succeeded, but the domain you opened is not attached to a deployment.
+
+1. **Vercel → calorie-tracker → Deployments** → open the latest green **Production** deployment → **Visit**
+2. **Settings → Domains** → check your production domain (e.g. `calorie-tracker-blush-nu.vercel.app`). If it errors or is missing, remove and re-add it, then redeploy.
+
+### Redirected to Vercel login
+
+**Deployment Protection** is on. For this app (Supabase handles login):
+
+1. **Settings → Deployment Protection**
+2. Disable **Vercel Authentication** for **Production** (and Preview if needed)
+
+### `No Output Directory named "public"`
+
+**Settings → Build & Deployment** → Framework: **Next.js**, Output Directory: **blank**.
 
 ## Implementation Plan
 

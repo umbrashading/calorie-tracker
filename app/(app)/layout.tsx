@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/nav/SignOutButton";
-import { createClient } from "@/lib/supabase/server";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { canCreateClient, createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types/database";
 
 type ProfileHeader = Pick<Profile, "display_name" | "avatar_emoji">;
 
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  if (!hasSupabaseEnv()) {
+  if (!canCreateClient()) {
     redirect("/login");
   }
 
@@ -24,7 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .from("profiles")
     .select("display_name, avatar_emoji")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   const profile = data as ProfileHeader | null;
 

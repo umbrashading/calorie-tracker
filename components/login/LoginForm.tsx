@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseEnv } from "@/lib/supabase/env";
 
+function formatError(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return "Could not connect to Supabase. Check your project URL and API keys, then redeploy on Vercel.";
+}
+
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -17,7 +24,9 @@ export function LoginForm() {
     setError(null);
 
     if (!hasSupabaseEnv()) {
-      setError("Supabase is not configured. Check environment variables in Vercel.");
+      setError(
+        "Supabase is not configured in this deployment. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel, then redeploy."
+      );
       return;
     }
 
@@ -26,7 +35,7 @@ export function LoginForm() {
     try {
       const supabase = createClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -37,8 +46,8 @@ export function LoginForm() {
 
       router.push("/dashboard");
       router.refresh();
-    } catch {
-      setError("Could not connect to Supabase. Check your project URL and API keys.");
+    } catch (caught) {
+      setError(formatError(caught));
     } finally {
       setLoading(false);
     }
@@ -53,7 +62,8 @@ export function LoginForm() {
 
       {!hasSupabaseEnv() ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Supabase environment variables are missing. Add them in Vercel project settings.
+          Supabase environment variables are missing from this build. Add them in Vercel and
+          redeploy — saving env vars alone is not enough for NEXT_PUBLIC_* variables.
         </p>
       ) : null}
 

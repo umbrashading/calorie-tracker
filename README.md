@@ -63,6 +63,16 @@ This repo includes a root `vercel.json` that forces the Next.js framework preset
 
 After deploy, open `/api/health` on your Vercel URL. You should see `{"ok":true,...}`. If that 404s, the deployment artifact is still wrong — check build logs for framework detection.
 
+### "Configuration Settings differ from Project Settings" (Vercel warning)
+
+Your **live Production deployment** was built with old settings (likely Output Directory = `public`). Project Settings may look correct now, but **Production Overrides** still use the broken config until you redeploy.
+
+1. **Settings → Build & Deployment → Framework Settings**
+2. Turn **OFF** every Override toggle (Build Command, Output Directory, Install Command)
+3. Framework Preset: **Next.js**, Output Directory: leave as default with override **off**
+4. **Deployments → Redeploy** → uncheck **Use existing Build Cache**
+5. Warning should disappear; `/api/health` should return JSON
+
 ## Implementation Plan
 
 See [`docs/implementation-plan.md`](./docs/implementation-plan.md) for the full build roadmap.

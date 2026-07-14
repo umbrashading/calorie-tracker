@@ -81,3 +81,4 @@ See [`docs/implementation-plan.md`](./docs/implementation-plan.md) for the full 
 
 - **Milestone 1** — Scaffold ✅
 - **Milestone 2** — Schema + Auth ✅ (migrations, middleware, login, dashboard stub)
+- **Milestone 3** — Intake chatbot (text-only) ✅

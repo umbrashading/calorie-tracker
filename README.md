@@ -57,6 +57,12 @@ The build likely succeeded, but the domain you opened is not attached to a deplo
 
 **Settings → Build & Deployment** → Framework: **Next.js**, Output Directory: **blank**.
 
+This repo includes a root `vercel.json` that forces the Next.js framework preset. Merge and redeploy if settings in the Vercel dashboard were previously wrong.
+
+### Verify deployment is live
+
+After deploy, open `/api/health` on your Vercel URL. You should see `{"ok":true,...}`. If that 404s, the deployment artifact is still wrong — check build logs for framework detection.
+
 ## Implementation Plan
 
 See [`docs/implementation-plan.md`](./docs/implementation-plan.md) for the full build roadmap.

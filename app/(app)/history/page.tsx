@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fetchSummariesForRange } from "@/lib/calc/fetch-summaries";
 import { HistoryWeekList } from "@/components/history/HistoryWeekList";
-import type { DailySummary } from "@/lib/types/database";
 import { addDays, endOfWeek, startOfWeek, todayInTimezone } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
@@ -27,14 +27,10 @@ export default async function HistoryPage({
   const weekStart = startOfWeek(anchorDate);
   const weekEnd = endOfWeek(anchorDate);
 
-  const { data: summaryData } = await supabase
-    .from("daily_summary")
-    .select("*")
-    .gte("entry_date", weekStart)
-    .lte("entry_date", weekEnd)
-    .order("entry_date", { ascending: false });
+  const summaries = await fetchSummariesForRange(supabase, weekStart, weekEnd, {
+    referenceTimezone: timezone,
+  });
 
-  const summaries = (summaryData ?? []) as DailySummary[];
   const prevWeek = addDays(weekStart, -7);
   const nextWeek = addDays(weekStart, 7);
   const nextWeekStart = startOfWeek(nextWeek);

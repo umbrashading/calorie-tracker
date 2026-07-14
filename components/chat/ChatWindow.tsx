@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmCard } from "@/components/chat/ConfirmCard";
 import type {
@@ -36,13 +36,19 @@ const MODE_CONFIG = {
   },
 } as const;
 
+const BOTTOM_NAV_OFFSET = "calc(3.5rem + env(safe-area-inset-bottom))";
+const MAX_TEXTAREA_HEIGHT = 160;
+
 export function ChatWindow({ mode }: ChatWindowProps) {
   const router = useRouter();
   const config = MODE_CONFIG[mode];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<HTMLFormElement>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [composerHeight, setComposerHeight] = useState(88);
   const [pendingResult, setPendingResult] = useState<
     IntakeEstimateResult | BurnEstimateResult | null
   >(null);
@@ -56,6 +62,33 @@ export function ChatWindow({ mode }: ChatWindowProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function resizeTextarea() {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT);
+    textarea.style.height = `${nextHeight}px`;
+  }
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [input]);
+
+  useEffect(() => {
+    const composer = composerRef.current;
+    if (!composer) return;
+
+    const observer = new ResizeObserver(() => {
+      setComposerHeight(composer.offsetHeight);
+    });
+
+    observer.observe(composer);
+    setComposerHeight(composer.offsetHeight);
+
+    return () => observer.disconnect();
+  }, [attachedImage, input, error]);
 
   function clearAttachedImage() {
     if (attachedImage?.previewUrl) {
@@ -230,6 +263,13 @@ export function ChatWindow({ mode }: ChatWindowProps) {
     void sendMessage(input);
   }
 
+  function handleTextareaKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void sendMessage(input);
+    }
+  }
+
   const burnExtraDetails =
     mode === "burn" && pendingResult
       ? [
@@ -244,8 +284,11 @@ export function ChatWindow({ mode }: ChatWindowProps) {
       : undefined;
 
   return (
-    <div className="flex min-h-[calc(100dvh-10rem)] flex-col">
-      <div className="flex-1 space-y-4 overflow-y-auto pb-4">
+    <div className="relative flex min-h-[calc(100dvh-4rem)] flex-col">
+      <div
+        className="flex-1 space-y-4 overflow-y-auto"
+        style={{ paddingBottom: composerHeight + 16 }}
+      >
         {messages.length === 0 ? (
           <p className="text-sm text-neutral-500">{config.emptyHint}</p>
         ) : null}
@@ -283,64 +326,70 @@ export function ChatWindow({ mode }: ChatWindowProps) {
       </div>
 
       <form
+        ref={composerRef}
         onSubmit={handleSubmit}
-        className="sticky bottom-0 -mx-4 border-t border-neutral-200 bg-neutral-50 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3"
+        className="fixed inset-x-0 z-40 border-t border-neutral-200 bg-neutral-50/95 backdrop-blur"
+        style={{ bottom: BOTTOM_NAV_OFFSET }}
       >
-        {attachedImage ? (
-          <div className="mb-3 flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={attachedImage.previewUrl}
-              alt="Attached meal"
-              className="h-16 w-16 rounded-lg object-cover ring-1 ring-neutral-200"
-            />
-            <button
-              type="button"
-              onClick={clearAttachedImage}
-              className="text-sm text-neutral-600 underline"
-            >
-              Remove photo
-            </button>
-          </div>
-        ) : null}
-
-        <div className="flex gap-2">
-          {mode === "intake" ? (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(event) => void handleImageSelect(event)}
+        <div className="mx-auto max-w-2xl px-4 pb-3 pt-3">
+          {attachedImage ? (
+            <div className="mb-3 flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={attachedImage.previewUrl}
+                alt="Attached meal"
+                className="h-16 w-16 rounded-lg object-cover ring-1 ring-neutral-200"
               />
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={loading || saving}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-neutral-300 bg-white text-lg disabled:opacity-60"
-                aria-label="Attach photo"
+                onClick={clearAttachedImage}
+                className="text-sm text-neutral-600 underline"
               >
-                📷
+                Remove photo
               </button>
-            </>
+            </div>
           ) : null}
-          <input
-            type="text"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder={config.placeholder}
-            disabled={loading || saving}
-            className="min-h-[44px] flex-1 rounded-xl border border-neutral-300 bg-white px-4 text-base"
-          />
-          <button
-            type="submit"
-            disabled={loading || saving || (!input.trim() && !attachedImage)}
-            className="min-h-[44px] rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
-          >
-            Send
-          </button>
+
+          <div className="flex items-end gap-2">
+            {mode === "intake" ? (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(event) => void handleImageSelect(event)}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading || saving}
+                  className="mb-0.5 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-white text-lg disabled:opacity-60"
+                  aria-label="Attach photo"
+                >
+                  📷
+                </button>
+              </>
+            ) : null}
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleTextareaKeyDown}
+              placeholder={config.placeholder}
+              disabled={loading || saving}
+              className="max-h-40 min-h-[44px] flex-1 resize-none overflow-y-auto rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-base leading-5"
+            />
+            <button
+              type="submit"
+              disabled={loading || saving || (!input.trim() && !attachedImage)}
+              className="mb-0.5 min-h-[44px] shrink-0 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            >
+              Send
+            </button>
+          </div>
         </div>
       </form>
     </div>

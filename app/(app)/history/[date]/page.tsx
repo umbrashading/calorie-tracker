@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fetchSummariesForDate } from "@/lib/calc/fetch-summaries";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
-import { sortSummariesByDisplayName } from "@/lib/calc/summary";
-import type {
-  BurnEntry,
-  DailySummary,
-  IntakeEntry,
-} from "@/lib/types/database";
+import type { BurnEntry, IntakeEntry } from "@/lib/types/database";
 import { formatDisplayDate, utcRangeForLocalDate } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +22,11 @@ export default async function HistoryDayPage({ params }: { params: { date: strin
   const timezone = (profileData as { timezone?: string } | null)?.timezone ?? "UTC";
   const { startIso, endIso } = utcRangeForLocalDate(params.date, timezone);
 
-  const [{ data: summaryData }, { data: intakeData }, { data: burnData }] = await Promise.all([
-    supabase.from("daily_summary").select("*").eq("entry_date", params.date),
+  const summaries = await fetchSummariesForDate(supabase, params.date, {
+    referenceTimezone: timezone,
+  });
+
+  const [{ data: intakeData }, { data: burnData }] = await Promise.all([
     supabase
       .from("intake_entries")
       .select("*")
@@ -42,7 +41,6 @@ export default async function HistoryDayPage({ params }: { params: { date: strin
       .order("logged_at", { ascending: false }),
   ]);
 
-  const summaries = sortSummariesByDisplayName((summaryData ?? []) as DailySummary[]);
   const intakeEntries = (intakeData ?? []) as IntakeEntry[];
   const burnEntries = (burnData ?? []) as BurnEntry[];
 

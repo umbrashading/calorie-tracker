@@ -105,6 +105,16 @@ export async function PATCH(request: Request) {
     updates.daily_calorie_target = body.daily_calorie_target;
   }
 
+  if (body.average_daily_steps !== undefined) {
+    if (body.average_daily_steps != null && body.average_daily_steps < 0) {
+      return NextResponse.json(
+        { error: "average_daily_steps must be non-negative" },
+        { status: 400 }
+      );
+    }
+    updates.average_daily_steps = body.average_daily_steps;
+  }
+
   if (body.timezone !== undefined) {
     if (!body.timezone?.trim()) {
       return NextResponse.json({ error: "timezone is required" }, { status: 400 });

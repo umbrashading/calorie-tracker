@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { fetchSummariesForDate } from "@/lib/calc/fetch-summaries";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { StepsInput } from "@/components/dashboard/StepsInput";
-import { sortSummariesByDisplayName } from "@/lib/calc/summary";
-import type { DailySteps, DailySummary } from "@/lib/types/database";
+import type { DailySteps } from "@/lib/types/database";
 import { todayInTimezone } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +23,10 @@ export default async function DashboardPage() {
   const timezone = (profileData as { timezone?: string } | null)?.timezone ?? "UTC";
   const today = todayInTimezone(timezone);
 
-  const { data: summaryData } = await supabase
-    .from("daily_summary")
-    .select("*")
-    .eq("entry_date", today);
-
-  const summaries = sortSummariesByDisplayName((summaryData ?? []) as DailySummary[]);
+  const summaries = await fetchSummariesForDate(supabase, today, {
+    includeAllProfiles: true,
+    referenceTimezone: timezone,
+  });
 
   const { data: stepsData } = await supabase
     .from("daily_steps")
@@ -44,7 +42,8 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold">Today</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Household calorie balance for {today}.
+          Household calorie balance for {today}. Burn estimates prorate through the day; steps
+          adjust above or below your average pace.
         </p>
       </div>
 
@@ -62,7 +61,7 @@ export default async function DashboardPage() {
         </section>
       ) : (
         <section className="rounded-xl border border-dashed border-neutral-300 bg-white p-6 text-center">
-          <p className="text-sm text-neutral-600">No activity logged yet today.</p>
+          <p className="text-sm text-neutral-600">No household profiles found yet.</p>
           <div className="mt-4 flex justify-center gap-3 text-sm">
             <Link href="/log/intake" className="font-medium text-neutral-900 underline">
               Log intake

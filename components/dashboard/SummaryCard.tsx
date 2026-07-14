@@ -1,5 +1,5 @@
 import type { DailySummary } from "@/lib/types/database";
-import { formatNetCalories, netCalorieTone } from "@/lib/calc/summary";
+import { formatNetCalories, formatSignedCalories, netCalorieTone } from "@/lib/calc/summary";
 
 interface SummaryCardProps {
   summary: DailySummary;
@@ -8,6 +8,7 @@ interface SummaryCardProps {
 
 export function SummaryCard({ summary, isCurrentUser }: SummaryCardProps) {
   const tone = netCalorieTone(summary.net_calories);
+  const isLive = summary.is_live ?? false;
 
   return (
     <article className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -51,17 +52,18 @@ export function SummaryCard({ summary, isCurrentUser }: SummaryCardProps) {
           </dd>
         </div>
         <div>
-          <dt className="text-neutral-500">Baseline</dt>
+          <dt className="text-neutral-500">{isLive ? "Baseline (so far)" : "Baseline"}</dt>
           <dd className="tabular-nums">{summary.baseline_calories ?? "—"} kcal</dd>
         </div>
         <div>
           <dt className="text-neutral-500">Exercise</dt>
           <dd className="tabular-nums">{summary.exercise_calories} kcal</dd>
         </div>
-        <div>
+        <div className="col-span-2">
           <dt className="text-neutral-500">Steps</dt>
           <dd className="tabular-nums">
-            {summary.steps.toLocaleString()} ({summary.steps_calories} kcal)
+            {summary.steps.toLocaleString()} ({formatSignedCalories(summary.steps_calories)}{" "}
+            kcal adj.)
           </dd>
         </div>
       </dl>

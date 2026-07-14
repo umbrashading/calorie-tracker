@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { fetchSummariesForDate, fetchSummariesForRange } from "@/lib/calc/fetch-summaries";
 import { createClient } from "@/lib/supabase/server";
-import type { DailySummary } from "@/lib/types/database";
 import { isAuthError, requireUser } from "@/lib/utils/auth";
 import { todayInTimezone } from "@/lib/utils/date";
 
@@ -24,21 +24,30 @@ export async function GET(request: Request) {
 
   const timezone = (profileData as { timezone?: string } | null)?.timezone ?? "UTC";
 
-  let query = supabase.from("daily_summary").select("*").order("entry_date", { ascending: false });
+  try {
+    if (date) {
+      const summaries = await fetchSummariesForDate(supabase, date, {
+        includeAllProfiles: date === todayInTimezone(timezone),
+        referenceTimezone: timezone,
+      });
+      return NextResponse.json({ summaries });
+    }
 
-  if (date) {
-    query = query.eq("entry_date", date);
-  } else if (from && to) {
-    query = query.gte("entry_date", from).lte("entry_date", to);
-  } else {
-    query = query.eq("entry_date", todayInTimezone(timezone));
+    if (from && to) {
+      const summaries = await fetchSummariesForRange(supabase, from, to, {
+        referenceTimezone: timezone,
+      });
+      return NextResponse.json({ summaries });
+    }
+
+    const today = todayInTimezone(timezone);
+    const summaries = await fetchSummariesForDate(supabase, today, {
+      includeAllProfiles: true,
+      referenceTimezone: timezone,
+    });
+    return NextResponse.json({ summaries });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to load summaries";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ summaries: (data ?? []) as DailySummary[] });
 }

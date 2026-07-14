@@ -1,5 +1,22 @@
-export function todayInTimezone(timezone: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+export function todayInTimezone(timezone: string, now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
+}
+
+export function getDayFraction(timezone: string, now = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? 0);
+  const second = Number(parts.find((part) => part.type === "second")?.value ?? 0);
+  const minutesElapsed = hour * 60 + minute + second / 60;
+
+  return Math.min(1, Math.max(0, minutesElapsed / 1440));
 }
 
 export function formatDisplayDate(dateStr: string): string {

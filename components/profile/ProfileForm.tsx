@@ -30,6 +30,10 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
       initialProfile.daily_calorie_target != null
         ? String(initialProfile.daily_calorie_target)
         : "",
+    average_daily_steps:
+      initialProfile.average_daily_steps != null
+        ? String(initialProfile.average_daily_steps)
+        : "8000",
     timezone: initialProfile.timezone,
   });
   const [saving, setSaving] = useState(false);
@@ -61,6 +65,9 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
       activity_level: form.activity_level,
       daily_calorie_target: form.daily_calorie_target
         ? Number(form.daily_calorie_target)
+        : null,
+      average_daily_steps: form.average_daily_steps
+        ? Number(form.average_daily_steps)
         : null,
       timezone: form.timezone.trim(),
     };
@@ -179,6 +186,22 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
             }
             className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-300 px-4 text-base"
           />
+        </label>
+        <label className="block text-sm">
+          <span className="font-medium text-neutral-700">Average daily steps</span>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={form.average_daily_steps}
+            onChange={(event) =>
+              setForm({ ...form, average_daily_steps: event.target.value })
+            }
+            className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-300 px-4 text-base"
+          />
+          <span className="mt-1 block text-xs text-neutral-500">
+            Used as your baseline for step calorie adjustments.
+          </span>
         </label>
         <label className="block text-sm">
           <span className="font-medium text-neutral-700">Timezone</span>

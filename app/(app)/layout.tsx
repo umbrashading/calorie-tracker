@@ -1,11 +1,16 @@
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import type { Profile } from "@/lib/types/database";
 
 type ProfileHeader = Pick<Profile, "display_name" | "avatar_emoji">;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  if (!hasSupabaseEnv()) {
+    redirect("/login");
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

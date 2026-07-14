@@ -1,52 +1,141 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmCard } from "@/components/chat/ConfirmCard";
 import type {
+  BurnChatResponse,
+  BurnEstimateResult,
   ChatMessage,
   IntakeChatResponse,
   IntakeEstimateResult,
 } from "@/lib/types/chat";
 
-export function ChatWindow() {
+type ChatMode = "intake" | "burn";
+
+interface ChatWindowProps {
+  mode: ChatMode;
+}
+
+const MODE_CONFIG = {
+  intake: {
+    chatEndpoint: "/api/chat/intake",
+    saveEndpoint: "/api/intake-entries",
+    emptyHint:
+      'Describe what you ate or drank — e.g. "two eggs and toast with butter" or attach a photo of your meal or a nutrition label.',
+    placeholder: "What did you eat?",
+    redirectTo: "/dashboard",
+  },
+  burn: {
+    chatEndpoint: "/api/chat/burn",
+    saveEndpoint: "/api/burn-entries",
+    emptyHint:
+      'Describe your exercise — e.g. "30 minute brisk walk" or "45 min weight training, moderate intensity".',
+    placeholder: "What did you do?",
+    redirectTo: "/dashboard",
+  },
+} as const;
+
+export function ChatWindow({ mode }: ChatWindowProps) {
   const router = useRouter();
+  const config = MODE_CONFIG[mode];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [pendingResult, setPendingResult] = useState<IntakeEstimateResult | null>(null);
-  const [rawModelResponse, setRawModelResponse] = useState<Record<string, unknown> | null>(
-    null
-  );
+  const [pendingResult, setPendingResult] = useState<
+    IntakeEstimateResult | BurnEstimateResult | null
+  >(null);
+  const [rawModelResponse, setRawModelResponse] = useState<Record<string, unknown> | null>(null);
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [attachedImage, setAttachedImage] = useState<{
+    previewUrl: string;
+    base64: string;
+    mediaType: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function clearAttachedImage() {
+    if (attachedImage?.previewUrl) {
+      URL.revokeObjectURL(attachedImage.previewUrl);
+    }
+    setAttachedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleImageSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image must be smaller than 10 MB.");
+      return;
+    }
+
+    setError(null);
+    clearAttachedImage();
+
+    const previewUrl = URL.createObjectURL(file);
+    const buffer = await file.arrayBuffer();
+    const base64 = btoa(
+      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+    );
+
+    setAttachedImage({
+      previewUrl,
+      base64,
+      mediaType: file.type,
+    });
+  }
+
   async function sendMessage(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || loading) return;
+    const hasImage = mode === "intake" && attachedImage != null;
+    if ((!trimmed && !hasImage) || loading) return;
 
     setError(null);
     setLoading(true);
     setPendingResult(null);
     setRawModelResponse(null);
 
-    const nextMessages: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
+    const displayText = trimmed || "Photo attached";
+    const nextMessages: ChatMessage[] = [...messages, { role: "user", content: displayText }];
     setMessages(nextMessages);
     setInput("");
 
+    const imageToSend = attachedImage;
+    clearAttachedImage();
+
     try {
-      const response = await fetch("/api/chat/intake", {
+      const requestBody: Record<string, unknown> = {
+        messages,
+        newUserMessage: trimmed,
+      };
+
+      if (mode === "intake" && imageToSend) {
+        requestBody.imageBase64 = imageToSend.base64;
+        requestBody.imageMediaType = imageToSend.mediaType;
+      }
+
+      const response = await fetch(config.chatEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages,
-          newUserMessage: trimmed,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      const data = (await response.json()) as IntakeChatResponse & {
+      const data = (await response.json()) as (IntakeChatResponse | BurnChatResponse) & {
         error?: string;
         rawModelResponse?: Record<string, unknown>;
+        imagePath?: string;
       };
 
       if (!response.ok) {
@@ -54,6 +143,10 @@ export function ChatWindow() {
       }
 
       setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
+
+      if (data.imagePath) {
+        setImagePath(data.imagePath);
+      }
 
       if (data.needsClarification) {
         return;
@@ -69,6 +162,9 @@ export function ChatWindow() {
       setError(message);
       setMessages(messages);
       setInput(trimmed);
+      if (imageToSend) {
+        setAttachedImage(imageToSend);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,16 +177,29 @@ export function ChatWindow() {
     setError(null);
 
     try {
-      const response = await fetch("/api/intake-entries", {
+      const payload: Record<string, unknown> = {
+        description: pendingResult.description,
+        calories: pendingResult.calories,
+        confidence: pendingResult.confidence,
+        assumptions: pendingResult.assumptions,
+        raw_model_response: rawModelResponse,
+      };
+
+      if (mode === "intake" && imagePath) {
+        payload.image_path = imagePath;
+      }
+
+      if (mode === "burn") {
+        const burnResult = pendingResult as BurnEstimateResult;
+        payload.exercise_type = burnResult.exercise_type;
+        payload.duration_minutes = burnResult.duration_minutes;
+        payload.intensity = burnResult.intensity;
+      }
+
+      const response = await fetch(config.saveEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: pendingResult.description,
-          calories: pendingResult.calories,
-          confidence: pendingResult.confidence,
-          assumptions: pendingResult.assumptions,
-          raw_model_response: rawModelResponse,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = (await response.json()) as { error?: string };
@@ -99,7 +208,7 @@ export function ChatWindow() {
         throw new Error(data.error ?? "Failed to save entry");
       }
 
-      router.push("/dashboard");
+      router.push(config.redirectTo);
       router.refresh();
     } catch (caught) {
       const message =
@@ -113,6 +222,7 @@ export function ChatWindow() {
   function handleCancelConfirm() {
     setPendingResult(null);
     setRawModelResponse(null);
+    setImagePath(null);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -120,14 +230,24 @@ export function ChatWindow() {
     void sendMessage(input);
   }
 
+  const burnExtraDetails =
+    mode === "burn" && pendingResult
+      ? [
+          (pendingResult as BurnEstimateResult).exercise_type,
+          (pendingResult as BurnEstimateResult).duration_minutes != null
+            ? `${(pendingResult as BurnEstimateResult).duration_minutes} min`
+            : null,
+          (pendingResult as BurnEstimateResult).intensity,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : undefined;
+
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col">
+    <div className="flex min-h-[calc(100dvh-10rem)] flex-col">
       <div className="flex-1 space-y-4 overflow-y-auto pb-4">
         {messages.length === 0 ? (
-          <p className="text-sm text-neutral-500">
-            Describe what you ate or drank — e.g. &quot;two eggs and toast with butter&quot; or
-            &quot;a large flat white&quot;.
-          </p>
+          <p className="text-sm text-neutral-500">{config.emptyHint}</p>
         ) : null}
 
         {messages.map((message, index) => (
@@ -151,6 +271,7 @@ export function ChatWindow() {
           <ConfirmCard
             result={pendingResult}
             saving={saving}
+            extraDetails={burnExtraDetails}
             onConfirm={() => void handleConfirm()}
             onCancel={handleCancelConfirm}
           />
@@ -163,21 +284,60 @@ export function ChatWindow() {
 
       <form
         onSubmit={handleSubmit}
-        className="sticky bottom-0 border-t border-neutral-200 bg-neutral-50 pt-3"
+        className="sticky bottom-0 -mx-4 border-t border-neutral-200 bg-neutral-50 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3"
       >
+        {attachedImage ? (
+          <div className="mb-3 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={attachedImage.previewUrl}
+              alt="Attached meal"
+              className="h-16 w-16 rounded-lg object-cover ring-1 ring-neutral-200"
+            />
+            <button
+              type="button"
+              onClick={clearAttachedImage}
+              className="text-sm text-neutral-600 underline"
+            >
+              Remove photo
+            </button>
+          </div>
+        ) : null}
+
         <div className="flex gap-2">
+          {mode === "intake" ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(event) => void handleImageSelect(event)}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading || saving}
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-neutral-300 bg-white text-lg disabled:opacity-60"
+                aria-label="Attach photo"
+              >
+                📷
+              </button>
+            </>
+          ) : null}
           <input
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="What did you eat?"
+            placeholder={config.placeholder}
             disabled={loading || saving}
             className="min-h-[44px] flex-1 rounded-xl border border-neutral-300 bg-white px-4 text-base"
           />
           <button
             type="submit"
-            disabled={loading || saving || !input.trim()}
-            className="rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            disabled={loading || saving || (!input.trim() && !attachedImage)}
+            className="min-h-[44px] rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
           >
             Send
           </button>

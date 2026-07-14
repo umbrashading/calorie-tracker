@@ -7,16 +7,20 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface IntakeChatRequest {
-  messages: ChatMessage[];
-  newUserMessage: string;
-}
-
-export interface IntakeEstimateResult {
+export interface EstimateResult {
   description: string;
   calories: number;
   confidence: Confidence;
   assumptions: string;
+}
+
+export type IntakeEstimateResult = EstimateResult;
+
+export interface IntakeChatRequest {
+  messages: ChatMessage[];
+  newUserMessage: string;
+  imageBase64?: string;
+  imageMediaType?: string;
 }
 
 export interface IntakeChatResponse {
@@ -24,6 +28,7 @@ export interface IntakeChatResponse {
   needsClarification: boolean;
   clarifyingQuestion?: string;
   result?: IntakeEstimateResult;
+  imagePath?: string;
 }
 
 export interface SaveIntakeEntryRequest {
@@ -31,6 +36,37 @@ export interface SaveIntakeEntryRequest {
   calories: number;
   confidence: Confidence;
   assumptions?: string;
+  image_path?: string;
+  logged_at?: string;
+  raw_model_response?: Record<string, unknown>;
+}
+
+export interface BurnEstimateResult extends EstimateResult {
+  exercise_type?: string;
+  duration_minutes?: number | null;
+  intensity?: string | null;
+}
+
+export interface BurnChatRequest {
+  messages: ChatMessage[];
+  newUserMessage: string;
+}
+
+export interface BurnChatResponse {
+  reply: string;
+  needsClarification: boolean;
+  clarifyingQuestion?: string;
+  result?: BurnEstimateResult;
+}
+
+export interface SaveBurnEntryRequest {
+  description: string;
+  calories: number;
+  confidence: Confidence;
+  assumptions?: string;
+  exercise_type?: string;
+  duration_minutes?: number | null;
+  intensity?: string | null;
   logged_at?: string;
   raw_model_response?: Record<string, unknown>;
 }

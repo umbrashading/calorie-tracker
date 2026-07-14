@@ -25,3 +25,32 @@ export const IntakeClaudeResponseSchema = z.object({
 });
 
 export type IntakeClaudeResponse = z.infer<typeof IntakeClaudeResponseSchema>;
+
+export const BurnClaudeResponseSchema = z.object({
+  reply: z.string().describe("Friendly message shown to the user in the chat"),
+  needs_clarification: z
+    .boolean()
+    .describe("True if duration, intensity, or details are too vague to estimate"),
+  clarifying_question: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Follow-up question when needs_clarification is true"),
+  result: z
+    .object({
+      description: z.string().describe("Concise summary of the exercise"),
+      calories: z.number().int().min(0).describe("Estimated calories burned"),
+      confidence: z.enum(["high", "medium", "low"]),
+      assumptions: z
+        .string()
+        .describe("Brief note on assumptions made for the estimate"),
+      exercise_type: z.string().nullable().optional(),
+      duration_minutes: z.number().int().min(0).nullable().optional(),
+      intensity: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional()
+    .describe("Populated when needs_clarification is false"),
+});
+
+export type BurnClaudeResponse = z.infer<typeof BurnClaudeResponseSchema>;

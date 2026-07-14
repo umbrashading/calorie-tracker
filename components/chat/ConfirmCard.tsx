@@ -1,13 +1,20 @@
-import type { IntakeEstimateResult } from "@/lib/types/chat";
+import type { EstimateResult } from "@/lib/types/chat";
 
 interface ConfirmCardProps {
-  result: IntakeEstimateResult;
+  result: EstimateResult;
   saving: boolean;
+  extraDetails?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function ConfirmCard({ result, saving, onConfirm, onCancel }: ConfirmCardProps) {
+export function ConfirmCard({
+  result,
+  saving,
+  extraDetails,
+  onConfirm,
+  onCancel,
+}: ConfirmCardProps) {
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
       <h3 className="text-sm font-medium text-neutral-500">Confirm entry</h3>
@@ -16,6 +23,7 @@ export function ConfirmCard({ result, saving, onConfirm, onCancel }: ConfirmCard
       <p className="mt-2 text-sm text-neutral-600">
         Confidence: <span className="capitalize">{result.confidence}</span>
       </p>
+      {extraDetails ? <p className="mt-1 text-sm text-neutral-600">{extraDetails}</p> : null}
       {result.assumptions ? (
         <p className="mt-2 text-sm text-neutral-500">{result.assumptions}</p>
       ) : null}

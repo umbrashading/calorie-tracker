@@ -8,18 +8,33 @@ import {
 } from "@/lib/claude/schemas";
 import type { ChatMessage, IntakeChatResponse } from "@/lib/types/chat";
 
+type ImageInput = {
+  base64: string;
+  mediaType: string;
+};
+
+const SUPPORTED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
 export async function estimateIntake(
   history: ChatMessage[],
-  newUserMessage: string
+  newUserMessage: string,
+  image?: ImageInput
 ): Promise<{ response: IntakeChatResponse; raw: IntakeClaudeResponse }> {
   const client = getAnthropicClient();
+
+  const userContent = buildUserContent(newUserMessage, image);
 
   const messages: MessageParam[] = [
     ...history.map((message) => ({
       role: message.role,
       content: message.content,
     })),
-    { role: "user", content: newUserMessage },
+    { role: "user", content: userContent },
   ];
 
   const result = await client.messages.parse({
@@ -41,6 +56,34 @@ export async function estimateIntake(
     response: mapClaudeResponse(parsed),
     raw: parsed,
   };
+}
+
+function buildUserContent(
+  newUserMessage: string,
+  image?: ImageInput
+): MessageParam["content"] {
+  if (!image) {
+    return newUserMessage;
+  }
+
+  if (!SUPPORTED_IMAGE_TYPES.has(image.mediaType)) {
+    throw new Error("Unsupported image type for vision");
+  }
+
+  return [
+    {
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: image.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+        data: image.base64,
+      },
+    },
+    {
+      type: "text",
+      text: newUserMessage || "Please estimate the calories for this meal or label.",
+    },
+  ];
 }
 
 function mapClaudeResponse(parsed: IntakeClaudeResponse): IntakeChatResponse {

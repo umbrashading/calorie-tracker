@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { BottomNav } from "@/components/nav/BottomNav";
 import { SignOutButton } from "@/components/nav/SignOutButton";
 import { canCreateClient, createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types/database";
@@ -30,9 +31,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const profile = data as ProfileHeader | null;
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="border-b border-neutral-200 bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-2xl items-center justify-between">
+    <div className="min-h-screen bg-neutral-50 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
+      <header
+        className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-xl" aria-hidden>
               {profile?.avatar_emoji ?? "🙂"}
@@ -45,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <div className="mx-auto max-w-2xl">{children}</div>
+      <BottomNav />
     </div>
   );
 }

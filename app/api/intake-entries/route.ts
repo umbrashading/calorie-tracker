@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { SaveIntakeEntryRequest } from "@/lib/types/chat";
 import type { Confidence } from "@/lib/types/database";
 import { isAuthError, requireUser } from "@/lib/utils/auth";
+import { utcRangeForLocalDate } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +15,28 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const limit = Math.min(Number(searchParams.get("limit") ?? "20"), 100);
+  const date = searchParams.get("date");
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("intake_entries")
     .select("*")
     .order("logged_at", { ascending: false })
     .limit(limit);
+
+  if (date) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("timezone")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const timezone = (profileData as { timezone?: string } | null)?.timezone ?? "UTC";
+    const { startIso, endIso } = utcRangeForLocalDate(date, timezone);
+    query = query.gte("logged_at", startIso).lt("logged_at", endIso);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -40,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { description, calories, confidence, assumptions, logged_at, raw_model_response } =
+  const { description, calories, confidence, assumptions, image_path, logged_at, raw_model_response } =
     body;
 
   if (!description?.trim()) {
@@ -62,6 +78,7 @@ export async function POST(request: Request) {
     calories,
     confidence,
     assumptions: assumptions?.trim() ?? null,
+    image_path: image_path ?? null,
     logged_at: logged_at ?? new Date().toISOString(),
     raw_model_response: raw_model_response ?? null,
   };

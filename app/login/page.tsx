@@ -1,18 +1,24 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login/LoginForm";
-import { createClient } from "@/lib/supabase/server";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import { canCreateClient, createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  if (hasSupabaseEnv()) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  let user = null;
 
-    if (user) {
-      redirect("/dashboard");
+  if (canCreateClient()) {
+    try {
+      const supabase = await createClient();
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    } catch {
+      // Show the login form if session refresh fails (e.g. stale cookies).
     }
+  }
+
+  if (user) {
+    redirect("/dashboard");
   }
 
   return (

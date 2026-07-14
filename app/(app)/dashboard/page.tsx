@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types/database";
 
+export const dynamic = "force-dynamic";
+
 type ProfilePreview = Pick<Profile, "id" | "display_name" | "avatar_emoji">;
 
 export default async function DashboardPage() {

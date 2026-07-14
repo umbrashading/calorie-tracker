@@ -19,6 +19,7 @@ export interface Profile {
   weight_kg: number | null;
   activity_level: ActivityLevel;
   daily_calorie_target: number | null;
+  average_daily_steps: number | null;
   timezone: string;
   created_at: string;
   updated_at: string;
@@ -71,6 +72,7 @@ export interface DailySummary {
   exercise_calories: number;
   calories_out_total: number | null;
   net_calories: number | null;
+  is_live?: boolean;
 }
 
 export interface Database {

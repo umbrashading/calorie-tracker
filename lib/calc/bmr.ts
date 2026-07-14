@@ -1,12 +1,7 @@
-import type { ActivityLevel, Profile, Sex } from "@/lib/types/database";
+import type { Profile, Sex } from "@/lib/types/database";
 
-const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
-  sedentary: 1.2,
-  light: 1.375,
-  moderate: 1.55,
-  active: 1.725,
-  very_active: 1.9,
-};
+/** Sedentary multiplier — everyday living excluding walking, which is covered by steps. */
+export const RESTING_ACTIVITY_MULTIPLIER = 1.2;
 
 export function computeBmr(sex: Sex, weightKg: number, heightCm: number, age: number): number {
   if (sex === "male") {
@@ -16,8 +11,8 @@ export function computeBmr(sex: Sex, weightKg: number, heightCm: number, age: nu
   return 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
 }
 
-export function computeBaselineCalories(
-  profile: Pick<Profile, "sex" | "weight_kg" | "height_cm" | "age" | "activity_level">
+export function computeRestingBaseline(
+  profile: Pick<Profile, "sex" | "weight_kg" | "height_cm" | "age">
 ): number | null {
   if (
     !profile.sex ||
@@ -29,10 +24,12 @@ export function computeBaselineCalories(
   }
 
   const bmr = computeBmr(profile.sex, profile.weight_kg, profile.height_cm, profile.age);
-  const multiplier = ACTIVITY_MULTIPLIERS[profile.activity_level];
-  return Math.round(bmr * multiplier);
+  return Math.round(bmr * RESTING_ACTIVITY_MULTIPLIER);
 }
 
-export function getActivityMultiplier(activityLevel: ActivityLevel): number {
-  return ACTIVITY_MULTIPLIERS[activityLevel];
+/** @deprecated Use computeRestingBaseline — activity level is no longer used in burn calculations. */
+export function computeBaselineCalories(
+  profile: Pick<Profile, "sex" | "weight_kg" | "height_cm" | "age">
+): number | null {
+  return computeRestingBaseline(profile);
 }

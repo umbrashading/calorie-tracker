@@ -32,7 +32,7 @@ export default async function ProfilePage() {
       <div>
         <h1 className="text-2xl font-semibold">Profile</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Biometrics power baseline calorie burn and exercise estimates.
+          Biometrics and average daily steps power calorie burn estimates.
         </p>
       </div>
       <ProfileForm initialProfile={profile} />

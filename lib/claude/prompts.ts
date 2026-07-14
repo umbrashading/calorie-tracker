@@ -20,7 +20,7 @@ Rules:
 export function buildBurnSystemPrompt(
   profile: Pick<
     Profile,
-    "display_name" | "age" | "sex" | "height_cm" | "weight_kg" | "activity_level"
+    "display_name" | "age" | "sex" | "height_cm" | "weight_kg" | "average_daily_steps"
   >
 ): string {
   const parts = [
@@ -33,7 +33,7 @@ export function buildBurnSystemPrompt(
     `- Sex: ${profile.sex ?? "unknown"}`,
     `- Height: ${profile.height_cm != null ? `${profile.height_cm} cm` : "unknown"}`,
     `- Weight: ${profile.weight_kg != null ? `${profile.weight_kg} kg` : "unknown"}`,
-    `- Activity level: ${profile.activity_level}`,
+    `- Average daily steps: ${profile.average_daily_steps ?? 8000}`,
     "",
     "You may ask ONE clarifying question when details like duration, distance, or intensity would change the estimate by more than ~50 calories.",
     "",

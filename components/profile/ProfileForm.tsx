@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ActivityLevel, Profile, Sex } from "@/lib/types/database";
-
-const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string }[] = [
-  { value: "sedentary", label: "Sedentary" },
-  { value: "light", label: "Light" },
-  { value: "moderate", label: "Moderate" },
-  { value: "active", label: "Active" },
-  { value: "very_active", label: "Very active" },
-];
+import type { Profile, Sex } from "@/lib/types/database";
 
 interface ProfileFormProps {
   initialProfile: Profile;
@@ -25,7 +17,6 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
     sex: initialProfile.sex ?? "",
     height_cm: initialProfile.height_cm != null ? String(initialProfile.height_cm) : "",
     weight_kg: initialProfile.weight_kg != null ? String(initialProfile.weight_kg) : "",
-    activity_level: initialProfile.activity_level,
     daily_calorie_target:
       initialProfile.daily_calorie_target != null
         ? String(initialProfile.daily_calorie_target)
@@ -62,7 +53,6 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
       sex: form.sex ? (form.sex as Sex) : null,
       height_cm: form.height_cm ? Number(form.height_cm) : null,
       weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
-      activity_level: form.activity_level,
       daily_calorie_target: form.daily_calorie_target
         ? Number(form.daily_calorie_target)
         : null,
@@ -159,20 +149,21 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
           />
         </label>
         <label className="block text-sm sm:col-span-2">
-          <span className="font-medium text-neutral-700">Activity level</span>
-          <select
-            value={form.activity_level}
+          <span className="font-medium text-neutral-700">Average daily steps</span>
+          <input
+            type="number"
+            min={0}
+            step={100}
+            value={form.average_daily_steps}
             onChange={(event) =>
-              setForm({ ...form, activity_level: event.target.value as ActivityLevel })
+              setForm({ ...form, average_daily_steps: event.target.value })
             }
             className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-300 px-4 text-base"
-          >
-            {ACTIVITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          />
+          <span className="mt-1 block text-xs text-neutral-500">
+            Estimates your typical daily walking calories before you log today&apos;s step
+            count. Once steps are entered, actual steps are used instead.
+          </span>
         </label>
         <label className="block text-sm">
           <span className="font-medium text-neutral-700">Daily calorie target</span>
@@ -186,22 +177,6 @@ export function ProfileForm({ initialProfile }: ProfileFormProps) {
             }
             className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-300 px-4 text-base"
           />
-        </label>
-        <label className="block text-sm">
-          <span className="font-medium text-neutral-700">Average daily steps</span>
-          <input
-            type="number"
-            min={0}
-            step={100}
-            value={form.average_daily_steps}
-            onChange={(event) =>
-              setForm({ ...form, average_daily_steps: event.target.value })
-            }
-            className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-300 px-4 text-base"
-          />
-          <span className="mt-1 block text-xs text-neutral-500">
-            Used as your baseline for step calorie adjustments.
-          </span>
         </label>
         <label className="block text-sm">
           <span className="font-medium text-neutral-700">Timezone</span>

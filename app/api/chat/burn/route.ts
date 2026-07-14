@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("display_name, age, sex, height_cm, weight_kg, activity_level")
+    .select("display_name, age, sex, height_cm, weight_kg, average_daily_steps")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   const profile = profileData as Pick<
     Profile,
-    "display_name" | "age" | "sex" | "height_cm" | "weight_kg" | "activity_level"
+    "display_name" | "age" | "sex" | "height_cm" | "weight_kg" | "average_daily_steps"
   > | null;
 
   if (!profile) {

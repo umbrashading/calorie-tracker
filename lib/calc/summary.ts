@@ -1,5 +1,9 @@
-import { computeBaselineCalories } from "@/lib/calc/bmr";
-import { computeStepsCalorieOffset, DEFAULT_AVERAGE_DAILY_STEPS } from "@/lib/calc/steps";
+import { computeRestingBaseline } from "@/lib/calc/bmr";
+import {
+  computeStepsCalories,
+  DEFAULT_AVERAGE_DAILY_STEPS,
+  resolveStepsForCalculation,
+} from "@/lib/calc/steps";
 import type { DailySummary, Profile } from "@/lib/types/database";
 import { getDayFraction, todayInTimezone } from "@/lib/utils/date";
 
@@ -13,20 +17,20 @@ export interface BuildDailySummaryInput {
   now?: Date;
 }
 
-export function computeProratedBaseline(
-  fullDayBaseline: number | null,
+export function computeProratedRestingBaseline(
+  fullDayRestingBaseline: number | null,
   dayFraction: number,
   isLiveDay: boolean
 ): number | null {
-  if (fullDayBaseline == null) {
+  if (fullDayRestingBaseline == null) {
     return null;
   }
 
   if (!isLiveDay) {
-    return fullDayBaseline;
+    return fullDayRestingBaseline;
   }
 
-  return Math.round(fullDayBaseline * dayFraction);
+  return Math.round(fullDayRestingBaseline * dayFraction);
 }
 
 export function buildDailySummary(input: BuildDailySummaryInput): DailySummary {
@@ -39,9 +43,20 @@ export function buildDailySummary(input: BuildDailySummaryInput): DailySummary {
   const dayFraction = isLiveDay ? getDayFraction(timezone, now) : 1;
   const averageDailySteps = profile.average_daily_steps ?? DEFAULT_AVERAGE_DAILY_STEPS;
 
-  const fullBaseline = computeBaselineCalories(profile);
-  const baselineCalories = computeProratedBaseline(fullBaseline, dayFraction, isLiveDay);
-  const stepsCalories = computeStepsCalorieOffset(
+  const fullRestingBaseline = computeRestingBaseline(profile);
+  const baselineCalories = computeProratedRestingBaseline(
+    fullRestingBaseline,
+    dayFraction,
+    isLiveDay
+  );
+  const steps = resolveStepsForCalculation(
+    enteredSteps,
+    averageDailySteps,
+    dayFraction,
+    isLiveDay,
+    hasStepsEntry
+  );
+  const stepsCalories = computeStepsCalories(
     enteredSteps,
     averageDailySteps,
     profile.weight_kg,
@@ -49,12 +64,6 @@ export function buildDailySummary(input: BuildDailySummaryInput): DailySummary {
     isLiveDay,
     hasStepsEntry
   );
-
-  const steps = hasStepsEntry
-    ? (enteredSteps ?? 0)
-    : isLiveDay
-      ? Math.round(averageDailySteps * dayFraction)
-      : averageDailySteps;
 
   const caloriesOutTotal =
     baselineCalories != null ? baselineCalories + stepsCalories + exerciseCalories : null;
@@ -81,11 +90,6 @@ export function formatNetCalories(net: number | null): string {
   if (net == null) return "—";
   if (net > 0) return `+${net}`;
   return String(net);
-}
-
-export function formatSignedCalories(value: number): string {
-  if (value > 0) return `+${value}`;
-  return String(value);
 }
 
 export function netCalorieTone(net: number | null): "neutral" | "surplus" | "deficit" {

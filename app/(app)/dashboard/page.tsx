@@ -42,8 +42,8 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold">Today</h1>
         <p className="mt-1 text-sm text-neutral-600">
-          Household calorie balance for {today}. Burn estimates prorate through the day; steps
-          adjust above or below your average pace.
+          Household calorie balance for {today}. Resting burn prorates through the day; walking
+          uses your average steps until you log today&apos;s count.
         </p>
       </div>
 

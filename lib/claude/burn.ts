@@ -9,7 +9,7 @@ import type { BurnChatResponse, ChatMessage } from "@/lib/types/chat";
 export async function estimateBurn(
   profile: Pick<
     Profile,
-    "display_name" | "age" | "sex" | "height_cm" | "weight_kg" | "activity_level"
+    "display_name" | "age" | "sex" | "height_cm" | "weight_kg" | "average_daily_steps"
   >,
   history: ChatMessage[],
   newUserMessage: string
